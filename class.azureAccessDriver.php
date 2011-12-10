@@ -238,9 +238,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		$logMessages = array();
 		
-		$selectedFiles = $selection->getFiles();
-		
-		foreach ($selectedFiles as $selectedFile)
+		foreach ($selection->getFiles() as $selectedFile)
 		{
 			// Actually do the delete
 			$pathinfo = self::splitContainerNamePath($selectedFile);
@@ -301,6 +299,67 @@ class azureAccessDriver extends AbstractAccessDriver
 		//return AJXP_XMLWriter::sendMessage('Saved.', null, false);
 	}
 	
+	private function copy($httpVars, $fileVars, $dir, $selection)
+	{
+		return $this->copyFile($httpVars, $selection, false);
+	}
+	
+	private function move($httpVars, $fileVars, $dir, $selection)
+	{
+		return $this->copyFile($httpVars, $selection, true);
+	}
+	
+	/**
+	 * Copy a file
+	 * @param	Array	http variables
+	 * @param	Array	Selected files
+	 * @param	Boolean	True to move the file, false to copy it
+	 */
+	private function copyFile($httpVars, $selection, $move)
+	{
+		if ($selection->isEmpty())
+			throw new AJXP_Exception('', 113);
+			
+		$dest = AJXP_Utils::decodeSecureMagic($httpVars['dest']);
+		$destinfo = self::splitContainerNamePath($dest);
+		$success = array();
+		
+		// If it's going into a subdirectory, ensure there's a slash at the end
+		if (!empty($destinfo->path))
+			$destinfo->path .= '/';
+		
+		foreach ($selection->getFiles() as $selectedFile)
+		{
+			$pathinfo = self::splitContainerNamePathFile($selectedFile);
+			$destFile = $destinfo->path . $pathinfo->filename;
+			$destPath = $destinfo->container . '/' . $destFile;
+			
+			$this->storage->copyBlob(
+				// Source container and path
+				$pathinfo->container, $pathinfo->path, 
+				// Destination container and path
+				$destinfo->container, $destFile);
+				
+			// If moving, delete the original
+			if ($move)
+			{
+				$this->storage->deleteBlob($pathinfo->container, $pathinfo->path);
+			}
+				
+			AJXP_Controller::applyHook('move.metadata', array($selectedFile, $destFile, false));
+			$success[] = ($move ? 'Moved ' : 'Copied ') . $selectedFile . ' to '. $destPath;
+		}
+		
+		AJXP_Logger::logAction('Copy', array('files' => $selection, 'destination' => $dest));
+		
+		return
+			AJXP_XMLWriter::sendMessage(implode("\n", $success), null, false) .
+			// Reload current directory
+			AJXP_XMLWriter::reloadDataNode('', '', false) .
+			// Reload destination directory
+			AJXP_XMLWriter::reloadDataNode($dest, '', false);
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Helper methods
 	////////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,8 +409,18 @@ class azureAccessDriver extends AbstractAccessDriver
 		$path = ltrim($path, '/');
 		// Separate container and file names
 		$containerPos = strpos($path, '/');
-		$container = substr($path, 0, $containerPos);
-		$path = substr($path, $containerPos + 1);
+		
+		// If there's no slash, we're at the root of a container
+		if ($containerPos === false)
+		{
+			$container = $path;
+			$path = '';
+		}
+		else
+		{
+			$container = substr($path, 0, $containerPos);
+			$path = substr($path, $containerPos + 1);
+		}
 		
 		return (object)array(
 			'container' => $container,
