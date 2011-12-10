@@ -91,32 +91,7 @@ class azureAccessDriver extends AbstractAccessDriver
 	 */
 	private function download($httpVars)
 	{
-		$path = $httpVars['file'];
-		$pathinfo = self::splitContainerNamePathFile($path);
-		
-		AJXP_Logger::logAction('Download', array('files' => $file));
-		
-        set_exception_handler('download_exception_handler');
-        set_error_handler('download_exception_handler');
-		@register_shutdown_function("restore_error_handler");
-        // Required for IE, otherwise Content-disposition is ignored
-		if (ini_get('zlib.output_compression'))
-			ini_set('zlib.output_compression', 'Off');
-		
-		// Stream the blob to the user
-		/*$handle = fopen('azure://' . $container . '/' . $path, 'r');
-		fpassthru($handle);
-		fclose($handle);*/
-		
-		// Load the blob
-		$data = $this->storage->getBlobData($pathinfo->container, $pathinfo->path);
-		header('Expires: 0');
-		header('Cache-Control: no-cache, must-revalidate');
-		header('Content-Type: application/octet-stream');
-		header('Content-Disposition: attachment; filename=' . $pathinfo->filename);
-		header('Content-Length: ' . strlen($data));
-		echo $data;
-		die();
+		return $this->returnFile($httpVars['file'], 'application/octet-stream');
 	}
 	
 	/**
@@ -281,12 +256,88 @@ class azureAccessDriver extends AbstractAccessDriver
 		return
 			AJXP_XMLWriter::sendMessage(implode("\n", $logMessages), null, false) .
 			AJXP_XMLWriter::reloadDataNode('', '', false);
-
-	}	
+	}
+	
+	/**
+	 * Online edit (eg. CodeMirror) - Load file
+	 */
+	private function get_content($httpVars, $fileVars, $dir, $selection)
+	{
+		$file = $selection->getUniqueFile($httpVars['file']);
+		$this->returnFile($file, 'text/plain');
+	}
+	
+	/**
+	 * Online edit (eg. CodeMirror) - Save file
+	 */
+	private function put_content($httpVars, $fileVars, $dir, $selection)
+	{
+		// No content? What?
+		if (!isset($httpVars['content']))
+			return;
+		
+		$file = $selection->getUniqueFile($httpVars['file']);
+		$pathinfo = self::splitContainerNamePathFile($file);
+		
+		// Get the code
+		$code = $httpVars['content'];
+		if (isset($httpVars['encode']) && $httpVars['encode'] == 'base64')
+		{
+			$code = base64_decode($code);
+		}
+		else
+		{
+			$code = SystemTextEncoding::magicDequote($code);
+			$code = str_replace('&lt;', '<', $code);
+		}
+		
+		AJXP_Logger::logAction('Edited online', array('file' => $file));
+		
+		// Save the content
+		$this->storage->putBlobData($pathinfo->container, $pathinfo->path, $code);
+		
+		header('Content-Type: text/plain');
+		echo 'Saved.';
+		//return AJXP_XMLWriter::sendMessage('Saved.', null, false);
+	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Helper methods
 	////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	/**
+	 * Outputs a particular file
+	 * @param	String		Path to the file
+	 * @param	String		Mime type of download
+	 */
+	private function returnFile($path, $mimeType)
+	{
+		$pathinfo = self::splitContainerNamePathFile($path);
+		
+		AJXP_Logger::logAction('Download', array('files' => $file));
+		
+        set_exception_handler('download_exception_handler');
+        set_error_handler('download_exception_handler');
+		@register_shutdown_function("restore_error_handler");
+        // Required for IE, otherwise Content-disposition is ignored
+		if (ini_get('zlib.output_compression'))
+			ini_set('zlib.output_compression', 'Off');
+		
+		// Stream the blob to the user
+		/*$handle = fopen('azure://' . $container . '/' . $path, 'r');
+		fpassthru($handle);
+		fclose($handle);*/
+		
+		// Load the blob
+		$data = $this->storage->getBlobData($pathinfo->container, $pathinfo->path);
+		header('Expires: 0');
+		header('Cache-Control: no-cache, must-revalidate');
+		header('Content-Type: ' . $mimeType);
+		header('Content-Disposition: attachment; filename=' . $pathinfo->filename);
+		header('Content-Length: ' . strlen($data));
+		echo $data;
+		die();
+	}
 	
 	/**
 	 * Split a full path into a container name and the path
