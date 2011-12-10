@@ -70,6 +70,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		$dir = AJXP_Utils::securePath($dir);
 		if ($dir == '/')
 			$dir = '';
+		$dir = AJXP_Utils::decodeSecureMagic($dir);
 		
 		// Populate the user's selection	
 		$selection = new UserSelection();
@@ -358,6 +359,37 @@ class azureAccessDriver extends AbstractAccessDriver
 			AJXP_XMLWriter::reloadDataNode('', '', false) .
 			// Reload destination directory
 			AJXP_XMLWriter::reloadDataNode($dest, '', false);
+	}
+
+	/**
+	 * Upload a file
+	 */
+	private function upload($httpVars, $fileVars, $dir, $selection)
+	{
+		$pathinfo = self::splitContainerNamePath($dir);
+		// If it's going into a subdirectory, ensure there's a slash at the end
+		if (!empty($pathinfo->path))
+			$pathinfo->path .= '/';
+			
+		foreach ($fileVars as $boxName => $boxData)
+		{
+			// Skip data that isn't files we want
+			if (substr($boxName, 0, 9) != 'userfile_')
+				continue;
+				
+			// Check for errors in this file
+			$err = AJXP_Utils::parseFileDataErrors($boxData);
+			if ($err != null)
+				return array('ERROR' => array('CODE' => $err[0], 'MESSAGE' => $err[1]));
+				
+			if (isset($boxData['input_upload']))
+				throw new Exception('Not implemented: input_upload mode');
+			
+			$filename = AJXP_Utils::sanitize(SystemTextEncoding::magicDequote($boxData['name']), AJXP_SANITIZE_HTML_STRICT);
+			
+			// Save the file into blob storage
+			$this->storage->putBlob($pathinfo->container, $pathinfo->path . $filename, $boxData['tmp_name']);
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////
