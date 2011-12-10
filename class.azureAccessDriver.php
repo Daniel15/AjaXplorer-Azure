@@ -2,14 +2,14 @@
 /**
  * @package info.ajaxplorer.plugins
  * 
- * Copyright 2007-2009 Charles du Jeu
- * This file is part of AjaXplorer.
- * The latest code can be found at http://www.ajaxplorer.info/
+ * Copyright 2011-2012 Daniel Lo Nigro <daniel@dan.cx>
+ * This file is part of AjaXplorer-Azure
  * 
- * This program is published under the LGPL Gnu Lesser General Public License.
+ * This program is published under the LGPL GNU Lesser General Public License.
  * You should have received a copy of the license along with AjaXplorer.
  * 
- * The main conditions are as follow : 
+ * The main conditions are as follows: 
+ *
  * You must conspicuously and appropriately publish on each copy distributed 
  * an appropriate copyright notice and disclaimer of warranty and keep intact 
  * all the notices that refer to this License and to the absence of any warranty; 
