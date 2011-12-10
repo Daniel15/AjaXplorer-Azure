@@ -71,7 +71,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		$this->https_cdn_base = $this->repository->getOption('AZURE_CDN_HTTPS');
 		
 		// Register the Azure stream wrapper
-		$this->storage->registerStreamWrapper();
+		//$this->storage->registerStreamWrapper();
 		//$this->wrapperClassName = 'azureAccessWrapper';
 	}
 	
@@ -403,6 +403,9 @@ class azureAccessDriver extends AbstractAccessDriver
 		if (!empty($pathinfo->path))
 			$pathinfo->path .= '/';
 			
+		// fileinfo is used to get MIME type of uploaded file
+		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
+			
 		foreach ($fileVars as $boxName => $boxData)
 		{
 			// Skip data that isn't files we want
@@ -420,7 +423,12 @@ class azureAccessDriver extends AbstractAccessDriver
 			$filename = AJXP_Utils::sanitize(SystemTextEncoding::magicDequote($boxData['name']), AJXP_SANITIZE_HTML_STRICT);
 			
 			// Save the file into blob storage
-			$this->storage->putBlob($pathinfo->container, $pathinfo->path . $filename, $boxData['tmp_name']);
+			$this->storage->putBlob($pathinfo->container, $pathinfo->path . $filename, $boxData['tmp_name'], array(), null, array(
+				'Content-Type' => $fileinfo->file($boxData['tmp_name']),
+				'Cache-Control' => 'public, max-age=2592000',
+			));
+			
+			AJXP_Logger::logAction('Upload File', array('file' => SystemTextEncoding::fromUTF8($dir) . '/' . $filename));
 		}
 	}
 	
