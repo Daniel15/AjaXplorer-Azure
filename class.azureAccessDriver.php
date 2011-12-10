@@ -45,15 +45,29 @@ require 'Microsoft/WindowsAzure/Storage/Blob.php';
  */
 class azureAccessDriver extends AbstractAccessDriver
 {
-	// TODO: Make this a setting
-	const BLOB_URL = '127.0.0.1:10000';
+	private $http_cdn_base;
+	private $https_cdn_base;
 	
 	/**
 	 * Initialise this repository
 	 */
 	public function initRepository()
 	{
-		$this->storage = new Microsoft_WindowsAzure_Storage_Blob(self::BLOB_URL);
+		// Using dev storage?
+		if ($this->repository->getOption('AZURE_USE_DEV'))
+		{
+			$this->storage = new Microsoft_WindowsAzure_Storage_Blob();
+		}
+		else
+		{
+			throw new Exception('Todo: live storage');
+		}
+		
+		// CDN base URLs
+		$this->http_cdn_base = $this->repository->getOption('AZURE_CDN_HTTP');
+		$this->https_cdn_base = $this->repository->getOption('AZURE_CDN_HTTPS');
+		
+		// Register the Azure stream wrapper
 		$this->storage->registerStreamWrapper();
 		//$this->wrapperClassName = 'azureAccessWrapper';
 	}
@@ -136,31 +150,8 @@ class azureAccessDriver extends AbstractAccessDriver
 		$blobs = $this->storage->listBlobs($container, $subDir, '/');
 		foreach ($blobs as $blob)
 		{
-			$filename = rtrim($blob->name, '/');
-			
-			// If the blob is in a subdirectory, get its filename
-			if (($dirPos = strpos($filename, '/')) !== false)
-			{
-				$filename = substr($filename, $dirPos + 1);
-			}
-			
-			$metaData = array(
-				'icon' => AJXP_Utils::mimetype($blob->name, 'image', $blob->isprefix),
-				'bytesize' => $blob->size,
-				'filesize' => AJXP_Utils::roundSize($blob->size),
-				'ajxp_modiftime' => @strtotime($blob->lastmodified),
-				'mimestring' => AJXP_Utils::mimetype($blob->name, 'type', $blob->isprefix)
-			);
-			
-			$renderNodeData = array(
-				AJXP_Utils::xmlEntities('/' . $blob->container . '/' . $blob->name, true), 	// nodeName
-				AJXP_Utils::xmlEntities($filename, true),								// nodeLabel
-				!$blob->isprefix,														// isLeaf (is a file)
-				$metaData
-			);
-			
 			// Add this file to the correct array (dirs or files)
-			$fullList[$blob->isprefix ? 'dirs' : 'files'][] = $renderNodeData;
+			$fullList[$blob->isprefix ? 'dirs' : 'files'][] = $this->getNode($blob);
 		}
 		
 		// Render all the nodes
@@ -168,6 +159,44 @@ class azureAccessDriver extends AbstractAccessDriver
 		array_map(array('AJXP_XMLWriter', 'renderNodeArray'), $fullList['files']);
 
 		AJXP_XMLWriter::close();
+	}
+	
+	/**
+	 * Get a node for the directory listing
+	 * @param	Microsoft_WindowsAzure_Storage_BlobInstance		Blob to add as a node
+	 * @return	Array	Node information
+	 */
+	private function getNode(Microsoft_WindowsAzure_Storage_BlobInstance $blob)
+	{
+		$filename = rtrim($blob->name, '/');
+		
+		// If the blob is in a subdirectory, get its filename
+		if (($dirPos = strpos($filename, '/')) !== false)
+		{
+			$filename = substr($filename, $dirPos + 1);
+		}
+		
+		$metaData = array(
+			'icon' => AJXP_Utils::mimetype($blob->name, 'image', $blob->isprefix),
+			'bytesize' => $blob->size,
+			'filesize' => AJXP_Utils::roundSize($blob->size),
+			'ajxp_modiftime' => @strtotime($blob->lastmodified),
+			'mimestring' => AJXP_Utils::mimetype($blob->name, 'type', $blob->isprefix),
+			'bloburl' => $blob->url,
+		);
+		
+		// Are there CDN URLs set?
+		if (!empty($this->http_cdn_base))
+			$metaData['cdn'] = $this->http_cdn_base . $blob->container . '/' . $blob->name;
+		if (!empty($this->https_cdn_base))
+			$metaData['cdn_ssl'] = $this->https_cdn_base . $blob->container . '/' . $blob->name;
+		
+		return array(
+			AJXP_Utils::xmlEntities('/' . $blob->container . '/' . $blob->name, true), 	// nodeName
+			AJXP_Utils::xmlEntities($filename, true),									// nodeLabel
+			!$blob->isprefix,															// isLeaf (is a file)
+			$metaData
+		);
 	}
 	
 	/**

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driver name="azure" className="class.azureDriver.php">
+	<actions>
+		<action name="view_url" fileDefault="true">
+			<gui text="azure.1" title="azure.2" src="documentinfo_koffice.png" hasAccessKey="false">
+				<context selection="true" dir="" recycle="hidden" 
+					actionBar="true" contextMenu="true" infoPanel="true"
+					actionBarGroup="change" inZip="false" root="false">
+				</context>
+				<selectionContext dir="false" file="true" recycle="false" unique="true" behaviour="hidden"></selectionContext></gui>
+			<rightsContext noUser="true" userLogged="only" read="true" write="true" adminOnly=""></rightsContext>
+			<processing>
+				<clientCallback prepareModal="true"><![CDATA[														
+					var loadFunc = function(oForm)
+					{
+						var currentFile = ajaxplorer.getUserSelection().getUniqueNode();
+						var metadata = currentFile.getMetadata();
+						
+						$('azure_blob_url').select('span')[0].update(metadata.get('bloburl'));
+						
+						// Are there CDN URLs?
+						if (metadata.get('cdn'))
+							$('azure_cdn_url').select('span')[0].update(metadata.get('cdn'));
+						if (metadata.get('cdn_ssl'))
+							$('azure_cdn_ssl_url').select('span')[0].update(metadata.get('cdn_ssl'));
+						
+					};			
+					modal.showDialogForm('View URL', 'azure_view_url', loadFunc, null, null, true);
+					]]></clientCallback>
+				<clientForm id="azure_view_url"><![CDATA[
+					<div title="azure.1" id="azure_view_url" box_width="600">
+						<p id="azure_cdn_url">
+							<strong>AJXP_MESSAGE[azure.3]: </strong><span></span>
+						</p>
+						<p id="azure_cdn_ssl_url">
+							<strong>AJXP_MESSAGE[azure.4]: </strong><span></span><br />
+						</p>
+						<p id="azure_blob_url">
+							<strong>AJXP_MESSAGE[azure.5]: </strong><span></span><br />
+						</p>
+					</div>
+					
+					<!-- TODO: Move styles elsewhere (into a stylesheet) -->
+					<style>
+						#azure_view_url strong
+						{
+							float: left;
+							width: 8.5em;
+						}
+						#azure_view_url p
+						{
+							margin: 0 0 0.2em 0;
+						}
+					</style>
+				]]></clientForm>
+				<serverCallback methodName="switchAction"></serverCallback>
+				</processing>
+		</action>
+	</actions>
+</driver>

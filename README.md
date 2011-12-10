@@ -26,7 +26,8 @@ $REPOSITORIES[2] = array(
 
 License
 =======
-Copyright 2011-2012 Daniel Lo Nigro <daniel@dan.cx>
+Copyright 2011-2012 Daniel Lo Nigro
+
 This program is published under the LGPL GNU Lesser General Public License.
 You should have received a copy of the license along with AjaXplorer.
 
