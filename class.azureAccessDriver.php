@@ -309,6 +309,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		$file = $selection->getUniqueFile($httpVars['file']);
 		$pathinfo = self::splitContainerNamePathFile($file);
+		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
 		
 		// Get the code
 		$code = $httpVars['content'];
@@ -325,11 +326,12 @@ class azureAccessDriver extends AbstractAccessDriver
 		AJXP_Logger::logAction('Edited online', array('file' => $file));
 		
 		// Save the content
-		$this->storage->putBlobData($pathinfo->container, $pathinfo->path, $code);
+		$this->storage->putBlobData($pathinfo->container, $pathinfo->path, $code, array(), null, array(
+			'Content-Type' => $fileinfo->buffer($code),
+		));
 		
 		header('Content-Type: text/plain');
 		echo 'Saved.';
-		//return AJXP_XMLWriter::sendMessage('Saved.', null, false);
 	}
 	
 	private function copy($httpVars, $fileVars, $dir, $selection)
