@@ -12,17 +12,7 @@ Dependencies
 Installation
 ============
 1. Copy files to ajaxplorer/plugins/access.azure
-2. Edit ajaxplorer/server/conf/conf.php and add something like:
-
-```php
-$REPOSITORIES[2] = array(
-	"DISPLAY"		=>	"Azure", 
-	"AJXP_SLUG"		=>  "azure",
-	"DRIVER"		=>	"azure", 
-	"DRIVER_OPTIONS"=> array(
-	),
-);
-```
+2. Create a repository in the settings section of AjaXplorer
 
 License
 =======

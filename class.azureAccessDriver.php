@@ -60,7 +60,10 @@ class azureAccessDriver extends AbstractAccessDriver
 		}
 		else
 		{
-			throw new Exception('Todo: live storage');
+			$host = $this->repository->getOption('AZURE_HOST');
+			$account = $this->repository->getOption('AZURE_ACCOUNT');
+			$key = $this->repository->getOption('AZURE_ACCESS_KEY');
+			$this->storage = new Microsoft_WindowsAzure_Storage_Blob($host, $account, $key);
 		}
 		
 		// CDN base URLs

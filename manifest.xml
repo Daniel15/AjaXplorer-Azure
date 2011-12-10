@@ -1,23 +1,35 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ajxpdriver name="azure" label="Azure Blob Storage" description="Connect to Azure blob storage" mixins="credentials_consumer,slug_provider">
+<ajxpdriver name="azure" label="Azure Blob Storage" description="Connect to Azure blob storage">
 	<client_settings icon="plugins/access.azure/icon.png">
 		<i18n namespace="azure" path="plugins/access.azure/resources/i18n" />
 	</client_settings>
 	<server_settings>
+		<!-- Basic settings -->
 		<param name="AZURE_USE_DEV" type="boolean" label="Use DEV storage" description="Use development storage?" />
+		
+		<!-- Account settings -->
+		<param name="AZURE_HOST" type="string" label="Host" default="blob.core.windows.net" description="Blob storage server (you shouldn't need to change this)" />
+		<param name="AZURE_ACCOUNT" type="string" label="Account Name" description="Storage account name" />
+		<param name="AZURE_ACCESS_KEY" type="string" label="Access Key" description="Storage access key" />
+		
+		<!-- CDN -->
 		<param name="AZURE_CDN_HTTP" type="string" label="CDN base URL" description="Base URL for CDN URLs (optional)" />
 		<param name="AZURE_CDN_HTTPS" type="string" label="SSL CDN base URL" description="Base URL for HTTPS CDN URLs (optional)" />
 	</server_settings>
 	<registry_contributions>
-		<external_file filename="plugins/access.azure/azureActions.xml" include="actions/*"/>
 		<client_configs>
 			<component_config className="FoldersTree">
 				<property name="display" value="dz"/>
 			</component_config>	
 		</client_configs>
+		<!-- Standard filesystem actions -->
 		<external_file filename="plugins/access.fs/fsActions.xml" include="actions/*" exclude=""/>
+		<!-- Standard filesystem configuration -->
 		<external_file filename="plugins/access.fs/manifest.xml" include="registry_contributions/client_configs/*" exclude=""/>
 		<external_file filename="plugins/access.fs/fsActions.xml" include="client_configs/*" exclude=""/>
+		
+		<!-- Custom Azure actions -->
+		<external_file filename="plugins/access.azure/azureActions.xml" include="actions/*"/>		
 	</registry_contributions>
 	<class_definition filename="plugins/access.azure/class.azureAccessDriver.php" classname="azureAccessDriver"/>
 	<class_stream_wrapper filename="plugins/access.azure/class.azureAccessWrapper.php" classname="azureAccessWrapper" protocol="ajxp.azure"/>
