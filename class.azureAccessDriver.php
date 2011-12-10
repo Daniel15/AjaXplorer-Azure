@@ -392,6 +392,28 @@ class azureAccessDriver extends AbstractAccessDriver
 		}
 	}
 	
+	/**
+	 * Create a new blank file
+	 */
+	private function mkfile($httpVars, $fileVars, $dir)
+	{
+		$filename = AJXP_Utils::decodeSecureMagic($httpVars['filename'], AJXP_SANITIZE_HTML_STRICT);
+		$pathinfo = self::splitContainerNamePath($dir);
+		
+		// If it's going into a subdirectory, ensure there's a slash at the end
+		if (!empty($pathinfo->path))
+			$pathinfo->path .= '/';
+		
+		// Create a blank blob
+		$this->storage->putBlobData($pathinfo->container, $pathinfo->path . $filename, '');
+		AJXP_Logger::logAction('Create File', array('file' => $dir . '/' . $filename));
+		
+		return
+			AJXP_XMLWriter::sendMessage('Created new file ' . $dir . '/' . $filename, null, false) .
+			// Reload current directory
+			AJXP_XMLWriter::reloadDataNode('', $dir . '/' . $file, false);
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////
 	// Helper methods
 	////////////////////////////////////////////////////////////////////////////////////////////////
