@@ -127,30 +127,16 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		$fullList = array('dirs' => array(), 'files' => array());
 		
-		// Remove the trailing slash
-		$dir = ltrim($dir, '/');
-		$containerPos = strpos($dir, '/');
-		
-		// If there's no slash, we're at the root of a container
-		if ($containerPos === false)
-		{
-			$container = $dir;
-			$subDir = '';
-		}
-		else
-		{
-			$container = substr($dir, 0, $containerPos);
-			$subDir = substr($dir, $containerPos + 1) . '/';
-		}
+		$pathinfo = self::splitContainerNamePathFile($dir);
 		
 		AJXP_XMLWriter::renderHeaderNode(
 			AJXP_Utils::xmlEntities($dir, true), 
-			AJXP_Utils::xmlEntities(rtrim($subDir, '/'), true), 
+			AJXP_Utils::xmlEntities($pathinfo->filename, true), 
 			false, 
 			array());
 		
 		// Get all the blobs in this container
-		$blobs = $this->storage->listBlobs($container, $subDir, '/');
+		$blobs = $this->storage->listBlobs($pathinfo->container, $pathinfo->path . (!empty($pathinfo->path) ? '/' : ''), '/');
 		foreach ($blobs as $blob)
 		{
 			// Add this file to the correct array (dirs or files)
@@ -174,7 +160,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		$filename = rtrim($blob->name, '/');
 		
 		// If the blob is in a subdirectory, get its filename
-		if (($dirPos = strpos($filename, '/')) !== false)
+		if (($dirPos = strrpos($filename, '/')) !== false)
 		{
 			$filename = substr($filename, $dirPos + 1);
 		}
