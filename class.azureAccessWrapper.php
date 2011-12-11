@@ -38,24 +38,108 @@ defined('AJXP_EXEC') or die('Access not allowed');
 
 class azureAccessWrapper implements AjxpWrapper
 {
-	public static function getRealFSReference($path, $persistent = FALSE){
-		throw new AJXP_Exception('Not implemented: getRealFSReference');
-	}	
-
+	protected static $wrappers = array();
+	protected $handle;
+	
+	/**
+	 * Create an Azure protocol wrapper if needed, and return a path that will work with this
+	 * wrapper.
+	 * @param	String	Internal AjaXplorer path
+	 * @return	String	Path to use for file access, registered with the Azure stream handler
+	 */
+	protected static function initPath($path)
+	{
+		$url = parse_url($path);
+		$repoId = $url['host'];
+		$wrapperName = 'azure-' . $repoId;
+		
+		// Does this repository not already have a wrapper?
+		if (!isset(self::$wrappers[$repoId]))
+		{
+			$repo = ConfService::getRepositoryById($repoId);
+			if (!isset($repo)) 
+				throw new Exception('Cannot find repository with id ' . $repoId);
+				
+			// Using dev storage?
+			if ($repo->getOption('AZURE_USE_DEV'))
+			{
+				$storage = new Microsoft_WindowsAzure_Storage_Blob();
+			}
+			else
+			{
+				$host = $repo->getOption('AZURE_HOST');
+				$account = $repo->getOption('AZURE_ACCOUNT');
+				$key = $repo->getOption('AZURE_ACCESS_KEY');
+				$storage = new Microsoft_WindowsAzure_Storage_Blob($host, $account, $key);
+			}
+			
+			$storage->registerStreamWrapper($wrapperName);
+			// Mark this as having a wrapper
+			self::$wrappers[$repoId] = true;
+		}		
+		
+		return $wrapperName . ':/' . $url['path'];
+	}
+	
 	public static function isRemote()
 	{
 		return true;
 	}
-
+	
+	public function url_stat($path, $flags)
+	{
+		$path = self::initPath($path);
+		return stat($path);
+	}
+	
+	public static function getRealFSReference($path, $persistent = FALSE)
+	{
+		// TODO: Should this do more here?
+		return self::initPath($path);
+	}
+	
+	public function stream_open($url, $mode, $options, &$context)
+	{
+		$url = self::initPath($url);
+		$this->handle = fopen($url, $mode);		
+		return $this->handle !== false;
+	}
+	
+	public function stream_flush()
+	{
+		return fflush($this->handle);
+	}
+	
+	public function stream_eof()
+	{
+		return feof($this->handle);
+	}
+	
+	public function stream_read($count)
+	{
+		return fread($this->handle, $count);
+	}
+	
+	public function stream_close()
+	{
+		return fclose($this->handle);
+		$this->handle = null;
+	}
+	
 	public static function copyFileInStream($path, $stream)
 	{
-		throw new AJXP_Exception('Not implemented: copyFileInStream');
+		$handle = fopen(self::initPath($path), "rb");
+		while (!feof($handle))
+		{
+			$data = fread($handle, 4096);
+			fwrite($stream, $data, strlen($data));
+		}
+		fclose($handle);
 	}
-
-	public function stream_open($url, $mode, $options, &$context)
-	{		
-		throw new AJXP_Exception('Not implemented: stream_open');
-	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////
+	// Not implemented
+	////////////////////////////////////////////////////////////////////////////////////////////////
 
 	public function stream_stat()
 	{
@@ -72,34 +156,9 @@ class azureAccessWrapper implements AjxpWrapper
 		throw new AJXP_Exception('Not implemented: stream_tell');
 	}	
 
-	public function stream_read($count)
-	{    	
-		throw new AJXP_Exception('Not implemented:  stream_read');
-	}
-
 	public function stream_write($data)
 	{
 		throw new AJXP_Exception('Not implemented: getRealFSReference');
-	}
-
-	public function stream_eof()
-	{
-		throw new AJXP_Exception('Not implemented: stream_eof');
-	}
-
-	public function stream_close()
-	{
-		throw new AJXP_Exception('Not implemented: stream_close');
-	}
-
-	public function stream_flush()
-	{
-		throw new AJXP_Exception('Not implemented: stream_flush');
-	}
-
-	public function url_stat($path, $flags)
-	{
-		throw new AJXP_Exception('Not implemented: url_stat');
 	}
 
 	public static function changeMode($path, $chmodValue)

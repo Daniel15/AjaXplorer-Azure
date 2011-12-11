@@ -138,9 +138,11 @@ class azureAccessDriver extends AbstractAccessDriver
 		// Get all the blobs in this container
 		$blobs = $this->storage->listBlobs($pathinfo->container, $pathinfo->pathWithSlash, '/');
 		foreach ($blobs as $blob)
-		{
+		{			
 			// Add this file to the correct array (dirs or files)
-			$fullList[$blob->isprefix ? 'dirs' : 'files'][] = $this->getNode($blob);
+			$node = $this->getNode($blob);
+			if ($node != null)
+				$fullList[$blob->isprefix ? 'dirs' : 'files'][] = $node;
 		}
 		
 		// Render all the nodes
@@ -161,9 +163,11 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		// If the blob is in a subdirectory, get its filename
 		if (($dirPos = strrpos($filename, '/')) !== false)
-		{
 			$filename = substr($filename, $dirPos + 1);
-		}
+		
+		// If there's a dot at the start, it's a hidden file
+		if ($filename[0] == '.')
+			return;
 		
 		$metaData = array(
 			'icon' => AJXP_Utils::mimetype($blob->name, 'image', $blob->isprefix),
@@ -414,6 +418,31 @@ class azureAccessDriver extends AbstractAccessDriver
 	}
 	
 	/**
+	 * Create a new directory
+	 */
+	private function mkdir($httpVars, $fileVars, $dir)
+	{
+		$dirname = AJXP_Utils::decodeSecureMagic($httpVars['dirname'], AJXP_SANITIZE_HTML_STRICT);
+		$pathinfo = self::splitContainerNamePath($dir);
+		
+		/* Directories in Azure aren't actually "real", they're actually in the filename itself (ie.
+		 * the file name contains slashes as a delimiter. As a result of this, directories can't 
+		 * actually exist unless there's a file inside them. So, we'll create a blank blob inside 
+		 * the "new directory".
+		 */
+		$this->storage->putBlobData($pathinfo->container, $pathinfo->pathWithSlash . $dirname . '/.folder', '');
+		
+		// Log the change
+		$newNode = new AJXP_Node($dir . '/' . $dirname);
+        AJXP_Controller::applyHook('node.change', array(null, $newNode, false));
+        AJXP_Logger::logAction('Create Dir', array('dir' => $dir . '/' . $dirname));
+        
+        return
+        	AJXP_XMLWriter::sendMessage('Created directory ' . $dir . '/' . $dirname, null, false) .
+        	AJXP_XMLWriter::reloadDataNode('', $dirname, false);
+	}
+	
+	/**
 	 * Create a new blank file
 	 */
 	private function mkfile($httpVars, $fileVars, $dir)
@@ -421,12 +450,8 @@ class azureAccessDriver extends AbstractAccessDriver
 		$filename = AJXP_Utils::decodeSecureMagic($httpVars['filename'], AJXP_SANITIZE_HTML_STRICT);
 		$pathinfo = self::splitContainerNamePath($dir);
 		
-		// If it's going into a subdirectory, ensure there's a slash at the end
-		if (!empty($pathinfo->path))
-			$pathinfo->path .= '/';
-		
 		// Create a blank blob
-		$this->storage->putBlobData($pathinfo->container, $pathinfo->path . $filename, '');
+		$this->storage->putBlobData($pathinfo->container, $pathinfo->pathWithSlash . $filename, '');
 		AJXP_Logger::logAction('Create File', array('file' => $dir . '/' . $filename));
 		
 		return
