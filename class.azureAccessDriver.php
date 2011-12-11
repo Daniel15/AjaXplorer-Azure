@@ -515,8 +515,18 @@ class azureAccessDriver extends AbstractAccessDriver
 		$pathinfo = self::splitContainerNamePath($path);
 		// Now split the file out from that
 		$pathPos = strrpos($pathinfo->path, '/');
-		$pathinfo->filename = substr($pathinfo->path, $pathPos + 1);
-		$pathinfo->subDir = substr($pathinfo->path, 0, $pathPos);
+		
+		// If there's no slash, there's no subdirectory
+		if ($pathPos === false)
+		{
+			$pathinfo->filename = $pathinfo->path;
+			$pathinfo->subDir = '';
+		}
+		else
+		{
+			$pathinfo->filename = substr($pathinfo->path, $pathPos + 1);
+			$pathinfo->subDir = substr($pathinfo->path, 0, $pathPos);
+		}
 		
 		return $pathinfo;
 	}
