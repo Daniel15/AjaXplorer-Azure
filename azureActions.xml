@@ -20,9 +20,17 @@
 						
 						// Are there CDN URLs?
 						if (metadata.get('cdn'))
-							$('azure_cdn_url').select('span')[0].update(metadata.get('cdn'));
+						{
+							$('azure_cdn_url')
+								.setStyle({display: 'block'})
+								.select('span')[0]
+									.update(metadata.get('cdn'));
+						}
 						if (metadata.get('cdn_ssl'))
-							$('azure_cdn_ssl_url').select('span')[0].update(metadata.get('cdn_ssl'));
+							$('azure_cdn_ssl_url')
+								.setStyle({display: 'block'})
+								.select('span')[0]
+									.update(metadata.get('cdn_ssl'));
 						
 					};			
 					modal.showDialogForm('View URL', 'azure_view_url', loadFunc, null, null, true);
@@ -50,6 +58,13 @@
 						#azure_view_url p
 						{
 							margin: 0 0 0.2em 0;
+						}
+						
+						/* Hide these by default */
+						#azure_view_url p#azure_cdn_url,
+						#azure_view_url p#azure_cdn_ssl_url
+						{
+							display: none;
 						}
 					</style>
 				]]></clientForm>
