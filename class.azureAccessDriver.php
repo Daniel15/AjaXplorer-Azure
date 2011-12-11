@@ -136,7 +136,7 @@ class azureAccessDriver extends AbstractAccessDriver
 			array());
 		
 		// Get all the blobs in this container
-		$blobs = $this->storage->listBlobs($pathinfo->container, $pathinfo->path . (!empty($pathinfo->path) ? '/' : ''), '/');
+		$blobs = $this->storage->listBlobs($pathinfo->container, $pathinfo->pathWithSlash, '/');
 		foreach ($blobs as $blob)
 		{
 			// Add this file to the correct array (dirs or files)
@@ -345,14 +345,10 @@ class azureAccessDriver extends AbstractAccessDriver
 		$destinfo = self::splitContainerNamePath($dest);
 		$success = array();
 		
-		// If it's going into a subdirectory, ensure there's a slash at the end
-		if (!empty($destinfo->path))
-			$destinfo->path .= '/';
-		
 		foreach ($selection->getFiles() as $selectedFile)
 		{
 			$pathinfo = self::splitContainerNamePathFile($selectedFile);
-			$destFile = $destinfo->path . $pathinfo->filename;
+			$destFile = $destinfo->pathWithSlash . $pathinfo->filename;
 			$destPath = $destinfo->container . '/' . $destFile;
 			
 			$this->storage->copyBlob(
@@ -387,9 +383,6 @@ class azureAccessDriver extends AbstractAccessDriver
 	private function upload($httpVars, $fileVars, $dir, $selection)
 	{
 		$pathinfo = self::splitContainerNamePath($dir);
-		// If it's going into a subdirectory, ensure there's a slash at the end
-		if (!empty($pathinfo->path))
-			$pathinfo->path .= '/';
 			
 		// fileinfo is used to get MIME type of uploaded file
 		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
@@ -411,7 +404,7 @@ class azureAccessDriver extends AbstractAccessDriver
 			$filename = AJXP_Utils::sanitize(SystemTextEncoding::magicDequote($boxData['name']), AJXP_SANITIZE_HTML_STRICT);
 			
 			// Save the file into blob storage
-			$this->storage->putBlob($pathinfo->container, $pathinfo->path . $filename, $boxData['tmp_name'], array(), null, array(
+			$this->storage->putBlob($pathinfo->container, $pathinfo->pathWithSlash . $filename, $boxData['tmp_name'], array(), null, array(
 				'Content-Type' => $fileinfo->file($boxData['tmp_name']),
 				'Cache-Control' => 'public, max-age=2592000',
 			));
@@ -506,7 +499,8 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		return (object)array(
 			'container' => $container,
-			'path' => $path
+			'path' => $path,
+			'pathWithSlash' => $path . (!empty($path) ? '/' : ''),
 		);
 	}
 	
