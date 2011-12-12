@@ -15,6 +15,9 @@
 		<!-- CDN -->
 		<param name="AZURE_CDN_HTTP" type="string" label="CDN base URL" description="Base URL for CDN URLs (optional)" />
 		<param name="AZURE_CDN_HTTPS" type="string" label="SSL CDN base URL" description="Base URL for HTTPS CDN URLs (optional)" />
+		
+		<!-- Others -->
+		<param name="DEFAULT_RIGHTS" type="select" choices="r|Read Only,rw|Read and Write,w|Write Only (upload)" label="CONF_MESSAGE[Default Rights]" description="CONF_MESSAGE[This right pattern (empty, r, or rw) will be applied at user creation for this repository.]" default="" />
 	</server_settings>
 	<registry_contributions>
 		<client_configs>
