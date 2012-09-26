@@ -299,7 +299,6 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		$file = $selection->getUniqueFile($httpVars['file']);
 		$pathinfo = self::splitContainerNamePathFile($file);
-		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
 		
 		// Get the code
 		$code = $httpVars['content'];
@@ -317,7 +316,7 @@ class azureAccessDriver extends AbstractAccessDriver
 		
 		// Save the content
 		$this->storage->putBlobData($pathinfo->container, $pathinfo->path, $code, array(), null, array(
-			'Content-Type' => $fileinfo->buffer($code),
+			'Content-Type' => self::getContentTypeString($file, $code),
 		));
 		
 		header('Content-Type: text/plain');
@@ -554,11 +553,15 @@ class azureAccessDriver extends AbstractAccessDriver
 		return $pathinfo;
 	}
 	
-	private static function getContentTypeFile($filename, $uploadPath)
+	/** 
+	 * Get MIME type based on extension
+	 * @param	String		File name
+	 * @return	String		MIME type if recognised, or null otherwise
+	 */
+	private static function getContentType($filename)
 	{
 		$extension = strrchr($filename, '.');
 		
-		// Common extensions
 		switch ($extension)
 		{
 			case '.jpeg':
@@ -605,10 +608,42 @@ class azureAccessDriver extends AbstractAccessDriver
 			case '.svg':
 				return 'image/svg+xml';
 			default:
-				// Not special cased, so use FileInfo extension to get content type
-				$fileinfo = new finfo(FILEINFO_MIME_TYPE);
-				return $fileinfo->file($uploadPath);
+				return null;
 		}
+	}
+	
+	/** 
+	 * Get MIME type based on file name and path
+	 * @param	String		File name
+	 * @param	String		Path of uploaded file
+	 * @return	String		MIME type if recognised, or null otherwise
+	 */
+	private static function getContentTypeFile($filename, $uploadPath)
+	{
+		$fileType = self::getContentType($filename);
+		if ($fileType != null)
+			return $fileType;
+
+		// Not special cased, so use FileInfo extension to get content type
+		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
+		return $fileinfo->file($uploadPath);
+	}
+	
+	/** 
+	 * Get MIME type based on file name and content
+	 * @param	String		File name
+	 * @param	String		Content of the file
+	 * @return	String		MIME type if recognised, or null otherwise
+	 */
+	private static function getContentTypeString($filename, $content)
+	{
+		$fileType = self::getContentType($filename);
+		if ($fileType != null)
+			return $fileType;
+
+		// Not special cased, so use FileInfo extension to get content type
+		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
+		return $fileinfo->buffer($content);
 	}
 }
 ?>
