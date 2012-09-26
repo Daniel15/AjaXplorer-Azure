@@ -388,9 +388,6 @@ class azureAccessDriver extends AbstractAccessDriver
 	{
 		$pathinfo = self::splitContainerNamePath($dir);
 			
-		// fileinfo is used to get MIME type of uploaded file
-		$fileinfo = new finfo(FILEINFO_MIME_TYPE);
-			
 		foreach ($fileVars as $boxName => $boxData)
 		{
 			// Skip data that isn't files we want
@@ -409,7 +406,8 @@ class azureAccessDriver extends AbstractAccessDriver
 			
 			// Save the file into blob storage
 			$this->storage->putBlob($pathinfo->container, $pathinfo->pathWithSlash . $filename, $boxData['tmp_name'], array(), null, array(
-				'Content-Type' => $fileinfo->file($boxData['tmp_name']),
+				'Content-Type' => self::getContentTypeFile($boxData['name'], $boxData['tmp_name']),
+				// TODO: Make this customisable?
 				'Cache-Control' => 'public, max-age=2592000',
 			));
 			
@@ -554,6 +552,63 @@ class azureAccessDriver extends AbstractAccessDriver
 		}
 		
 		return $pathinfo;
+	}
+	
+	private static function getContentTypeFile($filename, $uploadPath)
+	{
+		$extension = strrchr($filename, '.');
+		
+		// Common extensions
+		switch ($extension)
+		{
+			case '.jpeg':
+			case '.jpg':
+				return 'image/jpeg';
+			case '.gif':
+			   return 'image/gif';
+			case '.png':
+			   return 'image/x-png';
+			case '.tif':
+			   return 'image/tiff';
+			case '.html':
+			case '.htm':
+				return 'text/html';
+			case '.txt':
+				return 'text/plain';
+			case '.css':
+				return 'text/css';
+			case '.js':
+				return 'text/javascript';
+			case '.rtf':
+				return 'text/richtext';
+			case '.pub':
+				return 'application/vnd.ms-publisher';
+			case '.doc':
+			case '.docx':
+				return 'application/msword';
+			case '.ppt':
+			case '.pptx':
+				return 'application/vnd.ms-powerpoint';
+			case '.xls':
+			case '.xlsx':
+				return 'application/vnd.ms-excel';
+			case '.pdf':
+				return 'application/pdf';
+			case '.woff':
+				return 'font/x-woff';
+			case '.ttf':
+				return 'font/ttf';
+			case '.otf':
+				return 'font/otf';
+			case '.eot':
+				return 'application/vnd.ms-fontobject';
+			case '.svg':
+				return 'image/svg+xml';
+			default:
+				// Not special cased, so use FileInfo extension to get content type
+				$fileinfo = new finfo(FILEINFO_MIME_TYPE);
+				return $fileinfo->file($uploadPath);
+		}
 	}
 }
 ?>

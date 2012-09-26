@@ -4,6 +4,8 @@ AjaXplorer-Azure
 AjaXplorer-Azure is a [AjaXplorer](http://www.ajaxplorer.info/) plugin that allows browsing of Azure
 Blob Storage. It runs on both Windows and Linux.
 
+Currently tested on AjaXplorer 3.3.5 but it may work on newer versions
+
 Dependencies
 ============
  - [Windows Azure SDK for PHP](http://phpazure.codeplex.com/) (bundled)
